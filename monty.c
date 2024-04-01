@@ -1,58 +1,50 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "monty.h"
 
-stack_t *stack = NULL; // Global variable to represent the stack
-
 /**
- * push - Pushes an element onto the stack
- * @value: The value to push onto the stack
+ * main - Main
+ * @argc: Number of args
+ * @argv: Command line args
+ * Return: Void
  */
-void push(int value) {
-	stack_t *new_node = malloc(sizeof(stack_t));
-	if (new_node == NULL) {
-		fprintf(stderr, "Error: malloc failed\n");
-		exit(EXIT_FAILURE);
-	}
-	new_node->n = value;
-	new_node->prev = NULL;
-	new_node->next = stack;
-	if (stack != NULL) {
-		stack->prev = new_node;
-	}
-	stack = new_node;
-}
 
-/**
- * pall - Prints all the values on the stack
- */
-void pall(void) {
-	stack_t *current = stack;
-	while (current != NULL) {
-		printf("%d\n", current->n);
-		current = current->next;
-	}
-}
+int main(int argc, char *argv[])
+{
+	stack_t *head = NULL;
+	char  *str = NULL, *operator_array[2], *temp;
+	size_t bufsize = 1024, line_count = 0;
+	ssize_t get_line;
+	void (*operator_function)(stack_t **stack, unsigned int line_number);
 
-int main(int argc, char *argv[]) {
-	if (argc != 2) {
-		fprintf(stderr, "USAGE: monty file\n");
-		return EXIT_FAILURE;
-	}
-
-	char opcode[5];
-	int value;
-	while (fscanf(file, "%4s %d", opcode, &value) == 2) {
-		if (strcmp(opcode, "push") == 0) {
-			push(value);
-		} else if (strcmp(opcode, "pall") == 0) {
-			pall();
-		} else {
-			fprintf(stderr, "Error: unknown instruction %s\n", opcode);
-			 return EXIT_FAILURE;
+	if (argc != 2)
+		fprintf(stderr, "USAGE: monty file\n"), exit(EXIT_FAILURE);
+	file = fopen(argv[1], "r");
+	if (file == NULL)
+		fprintf(stderr, "Error: Can't open file %s\n", argv[1]), exit(EXIT_FAILURE);
+	while (1)
+	{
+		get_line = getline(&str, &bufsize, file);
+		if (get_line == -1)
+			break;
+		line_count++;
+		operator_array[0] = strtok(str, "\n ");
+		if (operator_array[0] == NULL)
+			get_nop(&head, line_count);
+		else if (strcmp("push", operator_array[0]) == 0)
+		{
+			temp = strtok(NULL, "\n ");
+			get_push(&head, line_count, temp);
+		}
+		else if (operator_array[0] != NULL && operator_array[0][0] != '#')
+		{
+			operator_function = go(operator_array[0], line_count, &head);
+			if (operator_function == NULL && line_count == 0)
+			{
+				fprintf(stderr, "L%ld: unknown instruction %s\n",
+						line_count, operator_array[0]), exit(EXIT_FAILURE);
+			}
+			operator_function(&head, line_count);
 		}
 	}
-
-	fclose(file);
-	return EXIT_SUCCESS;
+	fclose(file), free(str), get_free(head);
+	return (0);
 }
